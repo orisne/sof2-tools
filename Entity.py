@@ -1,4 +1,6 @@
 from Point import strToPoint
+from utils import extract_ents
+import re
 
 class Entity:
 
@@ -21,6 +23,7 @@ class Entity:
         s = '{\n'
         for key, value in self.ppts.items():
             s += f'\"{key}\" \"{value}\"\n'
+
         return s + '}'
 
 
@@ -41,29 +44,39 @@ class Entity:
             if k=='origin':
                 newprops[k] = strToPoint(v)
         self.ppts.update(newprops)
-
-
-
-
-
+        self.__dict__.update(self.ppts)
+        
 
 ### extra functions ###
 
-# Loads a ent file and returns a list of all the Entities inside as Entity objects
-def loadEntFile(file):
-    entList = []
+#A function that takes a .ent file and return a list with the Entities()
+def ent_file_to_objects(file):
+    test_str = extract_ents(file)
+    fullRange = r'\{.*?\}'
+    regex = r"((\".*?\").?(\".*?\"))"
+    ent_list = []
+    ppt_list = []
 
-    with open(file) as f:
 
-        _ents = f.read().replace('{\n', '').split('\n}\n')
-        _ents.remove(_ents[-1])
+    matchesFR = re.finditer(fullRange, test_str, re.MULTILINE | re.DOTALL)
+    for matchNum, match in enumerate(matchesFR, start=1):
+        ent_list.append("{match}".format(match = match.group().strip('{}')))
 
-        for _ent in _ents:
-            e = Entity()
-            _ppts = _ent.split('\n')
+    for i in ent_list:
+        matches = re.finditer(regex, i, re.DOTALL)
+        e = Entity()
+        for matchNum, match in enumerate(matches, start=1):
+            e.addppts(**{f'{match.group(2)}'.strip('"'):f'{match.group(3)}'.strip('"')})
+        ppt_list.append(e)
 
-            for line in _ppts:
-                e.addppts(**{line.split('\" \"')[0].replace('\"', ''): line.split('\" \"')[1].replace('\"', '')})
+    return ppt_list
 
-            entList.append(e)
+
+# A function to filter out certain entities from a list of Entities()
+def filterEnts(entList):
+    with open('ignorelist.config') as ignore:
+        for line in ignore:
+            entList[:] = [x for x in entList if not x.classname==line.strip('\n')]
+            
     return entList
+
