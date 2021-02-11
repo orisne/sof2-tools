@@ -1,82 +1,54 @@
-from Point import strToPoint
-from utils import extract_ents
-import re
+from Point import Point
 
+# Creates an entity
 class Entity:
+    
+    # Initializes an entity with a classname and an empty list of attributes
+    #* attributes has to be a single list of smaller 2 length lists for example:
+    #* [ ['key', 'value'], ['key', 'value'], ['key', 'value'] ]
+    def __init__(self, classname='temp', attributes=[]):
+        self.classname = classname
+        self.attributes = attributes
 
-    # Initializing a new Entity with keyword arguments
-    def __init__(self, **ppts):
-        self.ppts = ppts
-
-        # Checks if one of the keys is an origin and if so make it a Point object
-        for k, v in self.ppts.items():
-            if k == 'origin':
-                if type(v) == str:
-                    self.ppts[k] = strToPoint(v)
-
-        # Updates the dictionary of the class (to use as Entity.keyword)
-        self.__dict__.update(ppts)
-
-
-    # Sets the default string format for the class (ready for the .ent file)
+    # Formatting the entity syntax to fit into the .ent file
     def __str__(self):
-        s = '{\n'
-        for key, value in self.ppts.items():
-            s += f'\"{key}\" \"{value}\"\n'
+        t = '{' + f'\n"classname" "{self.classname}"\n'
+        for i in self.attributes:
+            t += f'"{i[0]}" "{i[1]}"\n'
+        t += '}'
+        return t
 
-        return s + '}'
+    # Moves an entitiy's origin by delta x,y,z (only if it has an origin property)
+    def move(self, dx, dy, dz):
+        for i, ppt in enumerate(self.attributes):
+            if 'origin' in ppt:
+                x = ppt[1].split(' ')
+                p = Point(int(x[0]), int(x[1]), int(x[2]))
+                p.move(int(dx), int(dy), int(dz))
+                self.attributes[i][1] = str(p)
+                break
+                
+    # Adds one or more attributes to the list, 
+    #* same syntax as __init__
+    def add_attributes(self, ppts):
+        for i in ppts:
+            self.attributes.append(i)
 
+    # Changes an existing property value, 
+    #* key='property_name' and value='value'
+    def change_value(self, key, value):
+        # checks if a the key to change is the classname, if so changes the self.classname
+        if key == 'classname':
+            self.classname = value
+        else:
+            for i, ppt in enumerate(self.attributes):
+                if key in ppt:
+                    self.attributes[i][1] = value
+                    break
 
-    # Moves only the origin of an Entity object
-    def moveOrigin(self, dx=0, dy=0, dz=0):
-        for key, value in self.ppts.items():
-            if key == 'origin':
-                value.move(dx,dy,dz)
-                self.ppts[key] = value
-
-    # Changes an existing value of a key (ex: Entity.changeValue('classname', 'NEW_classname'))
-    def changeValue(self, k, v):
-        self.ppts[k] = v
-
-    # Adding new properties to exsiting Entity (usefull for target/targetnames for example)
-    def addppts(self, **newprops):
-        for k, v in newprops.items():
-            if k=='origin':
-                newprops[k] = strToPoint(v)
-        self.ppts.update(newprops)
-        self.__dict__.update(self.ppts)
-        
-
-### extra functions ###
-
-#A function that takes a .ent file and return a list with the Entities()
-def ent_file_to_objects(file):
-    test_str = extract_ents(file)
-    fullRange = r'\{.*?\}'
-    regex = r"((\".*?\").?(\".*?\"))"
-    ent_list = []
-    ppt_list = []
-
-
-    matchesFR = re.finditer(fullRange, test_str, re.MULTILINE | re.DOTALL)
-    for matchNum, match in enumerate(matchesFR, start=1):
-        ent_list.append("{match}".format(match = match.group().strip('{}')))
-
-    for i in ent_list:
-        matches = re.finditer(regex, i, re.DOTALL)
-        e = Entity()
-        for matchNum, match in enumerate(matches, start=1):
-            e.addppts(**{f'{match.group(2)}'.strip('"'):f'{match.group(3)}'.strip('"')})
-        ppt_list.append(e)
-
-    return ppt_list
-
-
-# A function to filter out certain entities from a list of Entities()
-def filterEnts(entList):
-    with open('ignorelist.config') as ignore:
-        for line in ignore:
-            entList[:] = [x for x in entList if not x.classname==line.strip('\n')]
-            
-    return entList
-
+    # Checks if two entities share the same classname value, returns True if they do.
+    def compare_classnames(self, other):
+        if self.classname == other.classname:
+            return True
+        else:
+            return False
