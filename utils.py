@@ -63,7 +63,7 @@ def fill(point_1=Point(), point_2=Point(10,10,10), offset=Point(10,10,10), hollo
     border = [p1.x, p1.y, p1.z, p2.x, p2.y, p2.z]
     
     if offset.x == 0 or offset.y == 0 or offset.z == 0:
-        return 'offsets cannot be 0!'
+        print('offsets cannot be 0! setting to distance.')
     
     if p1.x-p2.x == 0:
         p2.x += 1
@@ -71,6 +71,10 @@ def fill(point_1=Point(), point_2=Point(10,10,10), offset=Point(10,10,10), hollo
         p2.y += 1
     if p1.z-p2.z == 0:
         p2.z += 1
+        
+    offset.x = p2.x-p1.x if offset.x > p2.x-p1.x or offset.x == 0 else offset.x
+    offset.y = p2.y-p1.y if offset.y > p2.y-p1.y or offset.y == 0 else offset.y
+    offset.z = p2.z-p1.z if offset.z > p2.z-p1.z or offset.z == 0 else offset.z
     
     for i in range(p1.z, p2.z+1, offset.z):
         for j in range(p1.y, p2.y+1, offset.y):
